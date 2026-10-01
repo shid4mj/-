@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>동글랜드 요리 시세 확인 및 재고 관리 v002 By 띵종</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Noto Sans KR) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans KR', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Sprite Icon Styling for Pixel Art Map */
+        .pixel-icon {
+            background-image: url('image_869538.png'); /* 업로드하신 0~2차 도트 이미지 파일명 */
+            background-repeat: no-repeat;
+            background-size: 500% 200%;
+            image-rendering: pixelated;
+        }
+        /* Row 1 (0차~1차) */
+        .icon-asparagus_salad { background-position: 0% 0%; }
+        .icon-garlic_potato_confit { background-position: 25% 0%; }
+        .icon-lemon_carrot_lape { background-position: 50% 0%; }
+        .icon-onion_potato_gratin { background-position: 75% 0%; }
+        .icon-croquette { background-position: 100% 0%; }
+
+        /* Row 2 (2차) */
+        .icon-garlic_asparagus_pickles { background-position: 0% 100%; }
+        .icon-citrus_onion_stew { background-position: 25% 100%; }
+        .icon-onion_potato_braised { background-position: 50% 100%; }
+        .icon-asparagus_lape { background-position: 75% 100%; }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col antialiased selection:bg-emerald-500 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-30 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700/80 shadow-sm transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <i class="fa-solid fa-utensils text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base sm:text-lg leading-tight text-slate-900 dark:text-white flex items-center gap-2">
+                        동글랜드 요리 시세 확인 및 재고 관리 <span class="text-xs font-normal text-slate-500 dark:text-slate-400">By 띵종</span>
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">사용자별 독립 시세 & 보유 재고 통합 관리</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Theme Toggle Button -->
+                <button id="themeToggleBtn" title="화면 테마 변경" class="p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700/60 rounded-xl border border-slate-300 dark:border-slate-600 transition-all flex items-center gap-2 text-xs font-medium">
+                    <i class="fa-solid fa-sun text-amber-500 hidden dark:inline"></i>
+                    <i class="fa-solid fa-moon text-indigo-600 dark:hidden"></i>
+                    <span id="themeText" class="hidden sm:inline">다크 모드</span>
+                </button>
+
+                <button id="resetDataBtn" title="현재 사용자 데이터 초기화" class="px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 border border-rose-500/30 rounded-xl transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span class="hidden sm:inline">초기화</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- User Profile Tabs Bar -->
+        <div class="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-3 shadow-sm flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar flex-1" id="userTabsContainer">
+                <!-- User Tabs rendered dynamically -->
+            </div>
+            <button id="addUserBtn" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 whitespace-nowrap flex-shrink-0">
+                <i class="fa-solid fa-user-plus"></i>
+                <span>사람 추가</span>
+            </button>
+        </div>
+
+        <!-- Top Control Dashboard Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Log Parser Box -->
+            <div class="lg:col-span-2 bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-sm dark:shadow-lg backdrop-blur-sm flex flex-col transition-colors duration-300">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-file-import text-emerald-600 dark:text-emerald-400"></i>
+                        거래소 로그 붙여넣기 (시세 자동 분석)
+                    </h2>
+                    <span class="text-xs text-slate-400" id="currentUserLabel">사용자: 동원</span>
+                </div>
+                <div class="flex-1 flex flex-col gap-2">
+                    <textarea id="logInput" rows="3" placeholder="거래소 채팅 또는 시세 로그를 붙여넣으세요...
+예시:
+🍳[🌟 비프 라구 파이] | 302 → 302
+🍳[🩶 아스파라거스 샐러드] | 65 → 71
+🍳[고로케] | 15 → 18" class="w-full bg-slate-50 dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs sm:text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all custom-scrollbar resize-none"></textarea>
+                    <div class="flex justify-between items-center pt-1">
+                        <p id="parserFeedback" class="text-xs text-emerald-600 dark:text-emerald-400 hidden flex items-center gap-1 font-medium">
+                            <i class="fa-solid fa-circle-check"></i> <span id="parserFeedbackText">로그 처리 완료</span>
+                        </p>
+                        <button id="applyLogBtn" class="ml-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium text-xs sm:text-sm rounded-xl shadow-md hover:shadow-emerald-600/20 transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-bolt"></i>
+                            시세 일괄 적용
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Target Peak Margin Settings Box -->
+            <div class="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 sm:p-5 shadow-sm dark:shadow-lg backdrop-blur-sm flex flex-col justify-between transition-colors duration-300">
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-sm font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-amber-500 dark:text-amber-400"></i>
+                            목표 고점 차이 (-N) 설정
+                        </h2>
+                        <span class="text-xs text-slate-400">조건 충족 시 강조</span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                        최고점 대비 시세 차이가 설정값 이내로 들어오면 해당 등급과 카드가 하이라이트됩니다.
+                    </p>
+
+                    <div class="grid grid-cols-3 gap-3">
+                        <!-- Normal Star Margin -->
+                        <div class="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60">
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1 flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-slate-400"></span> 무별 -N
+                            </label>
+                            <input type="number" id="targetMargin_none" value="2" min="0" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-center text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400">
+                        </div>
+                        <!-- Silver Star Margin -->
+                        <div class="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60">
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1 flex items-center gap-1">
+                                🩶 은별 -N
+                            </label>
+                            <input type="number" id="targetMargin_silver" value="2" min="0" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-center text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400">
+                        </div>
+                        <!-- Gold Star Margin -->
+                        <div class="bg-slate-50 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/60">
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1 flex items-center gap-1">
+                                🌟 금별 -N
+                            </label>
+                            <input type="number" id="targetMargin_gold" value="2" min="0" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-center text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-amber-400">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500 border border-amber-400 inline-block"></span>
+                        감지 조건 즉시 반영
+                    </span>
+                    <span class="text-amber-600 dark:text-amber-400 font-medium">자동 감지 중</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- View Filters & Category Navigation -->
+        <div class="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-3 sm:p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            
+            <!-- View Mode Filters -->
+            <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                <button data-view="all" class="view-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-emerald-600 text-white shadow-sm">
+                    <i class="fa-solid fa-list me-1"></i> 전체 보기
+                </button>
+                <button data-view="peak" class="view-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                    <i class="fa-solid fa-fire text-amber-500 me-1"></i> 🔥 고점 도달만
+                </button>
+                <button data-view="owned" class="view-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                    <i class="fa-solid fa-box-archive text-emerald-500 me-1"></i> 📦 보유 중만 보기
+                </button>
+            </div>
+
+            <!-- Tier Category Tabs -->
+            <div class="flex items-center space-x-1.5 overflow-x-auto pb-1 md:pb-0 custom-scrollbar">
+                <button data-category="all" class="category-tab px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all bg-emerald-600 text-white shadow-sm">
+                    전체
+                </button>
+                <button data-category="0" class="category-tab px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700">
+                    0차 요리
+                </button>
+                <button data-category="1" class="category-tab px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700">
+                    1차 요리
+                </button>
+                <button data-category="2" class="category-tab px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700">
+                    2차 요리
+                </button>
+                <button data-category="3" class="category-tab px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700">
+                    3차 요리
+                </button>
+                <button data-category="4" class="category-tab px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700">
+                    4차 요리
+                </button>
+            </div>
+        </div>
+
+        <!-- Dish Cards Container Grid -->
+        <div id="dishGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <!-- Cards rendered dynamically via JS -->
+        </div>
+
+    </main>
+
+    <!-- Modal for Image Config -->
+    <div id="imageModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="font-bold text-slate-800 dark:text-slate-100 text-base" id="modalDishTitle">요리 이미지 설정</h3>
+                <button id="closeModalBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">이미지 URL 입력</label>
+                    <input type="text" id="imageUrlInput" placeholder="https://example.com/image.png" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-2.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-emerald-500">
+                </div>
+                
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                    <span class="flex-shrink mx-3 text-xs text-slate-400">또는 파일 업로드</span>
+                    <div class="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                </div>
+
+                <div>
+                    <label class="block w-full text-center px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-300 dark:border-slate-600 rounded-xl cursor-pointer text-xs font-medium text-slate-700 dark:text-slate-200 transition-all">
+                        <i class="fa-solid fa-upload me-1.5"></i> 로컬 이미지 파일 선택
+                        <input type="file" id="imageFileInput" accept="image/*" class="hidden">
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="removeImageBtn" class="px-3 py-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-300 hover:bg-rose-500/20 text-xs font-medium rounded-lg border border-rose-500/30">이미지 삭제</button>
+                <button id="saveImageBtn" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg shadow-md">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DISH_PRESETS = [
+            // 0차
+            { id: 'croquette', name: '고로케', category: 0, maxPrices: { none: 16, silver: 18, gold: 20 }, spriteClass: 'icon-croquette', defaultImage: 'https://postfiles.pstatic.net/MjAyNjEwMDFfMTIy/MDAxNzkwODM0OTI3MzA3.2G7Bm7kvrDZefHBGjrs-aZXnWENKFRVeF3_nmAQH_OYg.JgFfkoAYrqnkF9UmLNNJVuEuwRGVtsqsxJUjP-x9S4Qg.PNG/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7_2026-10-01_150636.png?type=w966' },
+            
+            // 1차
+            { id: 'asparagus_salad', name: '아스파라거스 샐러드', category: 1, maxPrices: { none: 62, silver: 72, gold: 82 }, defaultImage: 'https://postfiles.pstatic.net/MjAyNjEwMDFfNjIg/MDAxNzkwODM0OTI3MzA4.vd3kp-O6niasi1N19TsUhs7olMIZl89hRFmcRYvvPpIg.atd3NuVdUWegSqdHfWaNwC7vQY8NREzfxYY-JlFpxzkg.PNG/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7_2026-10-01_150707.png?type=w966' },
+            { id: 'garlic_potato_confit', name: '갈릭 포테이토 콩피', category: 1, maxPrices: { none: 62, silver: 72, gold: 82 }, defaultImage: 'https://postfiles.pstatic.net/MjAyNjEwMDFfMTA4/MDAxNzkwODM0OTI3MzA4.qtvyXyybj4X2r5TRUR26YqMqADaFyOorjBnbBKBfpG4g.gYDDY5SBeOr9qLEY9AMZ52k4Ed23EGoCij2n8jjXYZwg.PNG/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7_2026-10-01_150645.png?type=w966' },
+            { id: 'lemon_carrot_lape', name: '레몬 당근 라페', category: 1, maxPrices: { none: 62, silver: 72, gold: 82 }, defaultImage: 'https://postfiles.pstatic.net/MjAyNjEwMDFfMTMw/MDAxNzkwODM0OTI3MzA3.AU7XtaquiL5I5B8AF9BwDNVSVtdEE8tIQup5CTWYPjIg.x9CV5Tt5It7l415-b0MIaNXid5eZhOIi_NedCdd9Djog.PNG/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7_2026-10-01_150648.png?type=w966' },
+            { id: 'onion_potato_gratin', name: '어니언 포테이토 그라탱', category: 1, maxPrices: { none: 62, silver: 72, gold: 82 }, defaultImage: 'https://postfiles.pstatic.net/MjAyNjEwMDFfMTU1/MDAxNzkwODM0OTI3NjMz.sffiHsa7HMR6W_5hTY-rQly4MgKq7cGYHdOcwZtPqKEg.4z06XEflaZhAQvVAJ5BOcapAg5vC7dBSJmJfFH-zRZQg.PNG/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7_2026-10-01_150639.png?type=w966' },
+
+            // 2차
+            { id: 'garlic_asparagus_pickles', name: '갈릭 아스파라거스 피클', category: 2, maxPrices: { none: 90, silver: 104, gold: 117 }, defaultImage: 'https://postfiles.pstatic.net/MjAyNjEwMDFfMTA2/MDAxNzkwODM0OTI3MzA3.D_YcCvoQibaSSHWDC5lN_FUbcFIaPxOERlWqSIOc64wg.hWE-n8pT_2KUzOJpbWTMGtkiMvbZB2-45pjLzToYlNEg.PNG/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7_2026-10-01_150721.png?type=w966' },
+            { id: 'citrus_onion_stew', name: '시트러스 어니언 스튜', category: 2, maxPrices: { none: 90, silver: 104, gold: 117 }, defaultImage: 'https://postfiles.pstatic.net/MjAyNjEwMDFfNTEg/MDAxNzkwODM0OTI3MzA4.ESCvU_IuRCRAdhEpaxRA8R4EULp_p3OL83L2GiN7wZAg.wbr0B1RSnVz5Lhv74RpG52YuNJLmSEc3_8ug5MnVIqcg.PNG/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7_2026-10-01_150718.png?type=w966' },
+            { id: 'onion_potato_braised', name: '어니언 감자조림', category: 2, maxPrices: { none: 90, silver: 104, gold: 117 }, defaultImage: 'https://postfiles.pstatic.net/MjAyNjEwMDFfNjAg/MDAxNzkwODM0OTI3NjIy.Queitkjc3nXQvwar8eaqQAjX9NzJkFeUvMlNzpV5ACwg.1B_aT2Cttg1rS9zukvPQxIvoPgcFQVnu6UufRERO3AEg.PNG/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7_2026-10-01_150715.png?type=w966' },
+            { id: 'asparagus_lape', name: '아스파라거스 라페', category: 2, maxPrices: { none: 90, silver: 104, gold: 117 }, defaultImage: 'https://postfiles.pstatic.net/MjAyNjEwMDFfMjQ3/MDAxNzkwODM0OTI3NTYz.0Y1yWZke1COceJSOoVA8ODYKF35yJCwbMfQ0qCXDWFEg.jvtOzq-CNIu-WA34RCL6tR-K3YMi9Bf1rzLqh3ZHNv4g.PNG/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7_2026-10-01_150711.png?type=w966' },
+
+            // 3차
+            { id: 'paprika_beef_stew', name: '파프리카 비프 스튜', category: 3, maxPrices: { none: 156, silver: 180, gold: 204 }, defaultImage: '' },
+            { id: 'peach_lemon_chicken', name: '피치 레몬 치킨', category: 3, maxPrices: { none: 156, silver: 180, gold: 204 }, defaultImage: '' },
+            { id: 'herb_lamb_platter', name: '허브 램 플래터', category: 3, maxPrices: { none: 156, silver: 180, gold: 204 }, defaultImage: '' },
+            { id: 'spicy_garlic_pork', name: '스파이시 갈릭 포크', category: 3, maxPrices: { none: 156, silver: 180, gold: 204 }, defaultImage: '' },
+
+            // 4차
+            { id: 'beef_ragu_pie', name: '비프 라구 파이', category: 4, maxPrices: { none: 248, silver: 287, gold: 325 }, defaultImage: '' },
+            { id: 'peach_chicken_tart', name: '복숭아 치킨 타르트', category: 4, maxPrices: { none: 248, silver: 287, gold: 325 }, defaultImage: '' },
+            { id: 'quiche_pie', name: '키슈 파이', category: 4, maxPrices: { none: 248, silver: 287, gold: 325 }, defaultImage: '' },
+            { id: 'garlic_pork_croquette', name: '갈릭 포크 크로켓', category: 4, maxPrices: { none: 248, silver: 287, gold: 325 }, defaultImage: '' }
+        ];
+
+        const LOCAL_STORAGE_KEY = 'cooking_dashboard_multi_user_v1';
+
+        let globalState = {
+            theme: 'light',
+            activeUserId: 'user_1',
+            users: [
+                { id: 'user_1', name: '동원' }
+            ],
+            userData: {
+                user_1: createEmptyUserData()
+            }
+        };
+
+        let activeCategory = 'all';
+        let activeViewFilter = 'all';
+        let currentModalDishId = null;
+
+        function createEmptyUserData() {
+            const data = {
+                targetMargins: { none: 2, silver: 2, gold: 2 },
+                dishes: {}
+            };
+            DISH_PRESETS.forEach(preset => {
+                data.dishes[preset.id] = {
+                    id: preset.id,
+                    prices: { none: null, silver: null, gold: null },
+                    inventory: {
+                        none: { owned: false, count: 0 },
+                        silver: { owned: false, count: 0 },
+                        gold: { owned: false, count: 0 }
+                    },
+                    image: null
+                };
+            });
+            return data;
+        }
+
+        function getCurrentUserData() {
+            if (!globalState.userData[globalState.activeUserId]) {
+                globalState.userData[globalState.activeUserId] = createEmptyUserData();
+            }
+            return globalState.userData[globalState.activeUserId];
+        }
+
+        function initData() {
+            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (saved) {
+                try {
+                    globalState = JSON.parse(saved);
+                } catch (e) {
+                    buildDefaultState();
+                }
+            } else {
+                buildDefaultState();
+            }
+
+            if (!globalState.users || globalState.users.length === 0) {
+                buildDefaultState();
+            }
+
+            // activeUserId가 유효한지 검증하여 탭 유지
+            const activeUserExists = globalState.users.some(u => u.id === globalState.activeUserId);
+            if (!activeUserExists) {
+                globalState.activeUserId = globalState.users[0].id;
+            }
+
+            // Ensure integrity of each user dish data
+            globalState.users.forEach(u => {
+                if (!globalState.userData[u.id]) {
+                    globalState.userData[u.id] = createEmptyUserData();
+                }
+                DISH_PRESETS.forEach(preset => {
+                    if (!globalState.userData[u.id].dishes[preset.id]) {
+                        globalState.userData[u.id].dishes[preset.id] = {
+                            id: preset.id,
+                            prices: { none: null, silver: null, gold: null },
+                            inventory: {
+                                none: { owned: false, count: 0 },
+                                silver: { owned: false, count: 0 },
+                                gold: { owned: false, count: 0 }
+                            },
+                            image: null
+                        };
+                    }
+                });
+            });
+
+            applyTheme(globalState.theme || 'light');
+            saveState();
+        }
+
+        function buildDefaultState() {
+            globalState = {
+                theme: 'light',
+                activeUserId: 'user_1',
+                users: [
+                    { id: 'user_1', name: '동원' }
+                ],
+                userData: {
+                    user_1: createEmptyUserData()
+                }
+            };
+        }
+
+        function saveState() {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(globalState));
+        }
+
+        function applyTheme(theme) {
+            globalState.theme = theme;
+            const htmlEl = document.documentElement;
+            const themeText = document.getElementById('themeText');
+
+            if (theme === 'dark') {
+                htmlEl.classList.add('dark');
+                if (themeText) themeText.textContent = '라이트 모드';
+            } else {
+                htmlEl.classList.remove('dark');
+                if (themeText) themeText.textContent = '다크 모드';
+            }
+            saveState();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initData();
+            renderUserTabs();
+            setupMarginInputs();
+            setupViewFilters();
+            setupCategoryFilter();
+            renderCards();
+            setupLogParser();
+            setupModalListeners();
+
+            document.getElementById('themeToggleBtn').addEventListener('click', () => {
+                applyTheme(globalState.theme === 'dark' ? 'light' : 'dark');
+            });
+
+            // 사람 추가 버튼 클릭 시 바로 이름을 묻고 탭 생성
+            document.getElementById('addUserBtn').addEventListener('click', () => {
+                const inputName = prompt('새로 추가할 사람의 이름을 입력하세요:', '');
+                if (inputName === null) return; // 취소 누른 경우
+
+                const trimmedName = inputName.trim();
+                if (!trimmedName) {
+                    alert('이름을 입력해야 추가할 수 있습니다.');
+                    return;
+                }
+
+                const newId = 'user_' + Date.now();
+                globalState.users.push({ id: newId, name: trimmedName });
+                globalState.userData[newId] = createEmptyUserData();
+                globalState.activeUserId = newId;
+
+                saveState();
+                renderUserTabs();
+                setupMarginInputs();
+                renderCards();
+            });
+
+            document.getElementById('resetDataBtn').addEventListener('click', () => {
+                const currentUser = globalState.users.find(u => u.id === globalState.activeUserId);
+                const userName = currentUser ? currentUser.name : '현재 사용자';
+                
+                if (confirm(`'${userName}'의 모든 시세 및 보유 데이터가 초기화됩니다. 진행하시겠습니까?`)) {
+                    globalState.userData[globalState.activeUserId] = createEmptyUserData();
+                    saveState();
+                    setupMarginInputs();
+                    renderCards();
+                }
+            });
+        });
+
+        function renderUserTabs() {
+            const container = document.getElementById('userTabsContainer');
+            container.innerHTML = '';
+
+            globalState.users.forEach(u => {
+                const isActive = u.id === globalState.activeUserId;
+                
+                const tabEl = document.createElement('div');
+                tabEl.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer select-none whitespace-nowrap ${
+                    isActive 
+                    ? 'bg-emerald-600 text-white shadow-md' 
+                    : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                }`;
+
+                tabEl.innerHTML = `
+                    <span onclick="switchUser('${u.id}')" ondoubleclick="editUserName('${u.id}')" title="더블 클릭 시 이름 수정" class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-user text-[11px]"></i>
+                        <span>${u.name}</span>
+                    </span>
+                    ${globalState.users.length > 1 ? `
+                        <button onclick="removeUser(event, '${u.id}')" title="사용자 삭제" class="ml-1 hover:text-rose-300 opacity-70 hover:opacity-100 transition-opacity">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    ` : ''}
+                `;
+
+                container.appendChild(tabEl);
+            });
+
+            const currentUser = globalState.users.find(u => u.id === globalState.activeUserId);
+            if (currentUser) {
+                document.getElementById('currentUserLabel').textContent = `현재 사용자: ${currentUser.name}`;
+            }
+        }
+
+        window.switchUser = function(userId) {
+            globalState.activeUserId = userId;
+            saveState(); // 선택한 activeUserId를 저장하여 창을 껐다 켜도 유지
+            renderUserTabs();
+            setupMarginInputs();
+            renderCards();
+        };
+
+        window.editUserName = function(userId) {
+            const user = globalState.users.find(u => u.id === userId);
+            if (!user) return;
+
+            const newName = prompt('변경할 이름을 입력하세요:', user.name);
+            if (newName && newName.trim()) {
+                user.name = newName.trim();
+                saveState();
+                renderUserTabs();
+            }
+        };
+
+        window.removeUser = function(event, userId) {
+            event.stopPropagation();
+            if (globalState.users.length <= 1) {
+                alert('최소 1명의 사용자는 유지되어야 합니다.');
+                return;
+            }
+
+            const targetUser = globalState.users.find(u => u.id === userId);
+            if (confirm(`'${targetUser.name}' 사용자를 삭제하시겠습니까? 데이터가 삭제됩니다.`)) {
+                globalState.users = globalState.users.filter(u => u.id !== userId);
+                delete globalState.userData[userId];
+
+                if (globalState.activeUserId === userId) {
+                    globalState.activeUserId = globalState.users[0].id;
+                }
+
+                saveState();
+                renderUserTabs();
+                setupMarginInputs();
+                renderCards();
+            }
+        };
+
+        function setupMarginInputs() {
+            const userData = getCurrentUserData();
+            ['none', 'silver', 'gold'].forEach(star => {
+                const el = document.getElementById(`targetMargin_${star}`);
+                if (el) {
+                    el.value = userData.targetMargins[star] ?? 2;
+                    el.oninput = (e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        userData.targetMargins[star] = val < 0 ? 0 : val;
+                        saveState();
+                        renderCards();
+                    };
+                }
+            });
+        }
+
+        function setupViewFilters() {
+            const btns = document.querySelectorAll('.view-filter-btn');
+            btns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    btns.forEach(b => {
+                        b.classList.remove('bg-emerald-600', 'text-white', 'shadow-sm', 'font-bold');
+                        b.classList.add('text-slate-600', 'dark:text-slate-400', 'font-medium');
+                    });
+                    btn.classList.remove('text-slate-600', 'dark:text-slate-400', 'font-medium');
+                    btn.classList.add('bg-emerald-600', 'text-white', 'shadow-sm', 'font-bold');
+
+                    activeViewFilter = btn.dataset.view;
+                    renderCards();
+                });
+            });
+        }
+
+        function setupCategoryFilter() {
+            const tabs = document.querySelectorAll('.category-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => {
+                        t.classList.remove('bg-emerald-600', 'text-white', 'shadow-sm', 'font-semibold');
+                        t.classList.add('bg-slate-100', 'dark:bg-slate-900', 'text-slate-600', 'dark:text-slate-300', 'border', 'border-slate-200', 'dark:border-slate-700', 'font-medium');
+                    });
+                    tab.classList.remove('bg-slate-100', 'dark:bg-slate-900', 'text-slate-600', 'dark:text-slate-300', 'border', 'border-slate-200', 'dark:border-slate-700', 'font-medium');
+                    tab.classList.add('bg-emerald-600', 'text-white', 'shadow-sm', 'font-semibold');
+
+                    activeCategory = tab.dataset.category;
+                    renderCards();
+                });
+            });
+        }
+
+        function setupLogParser() {
+            const applyBtn = document.getElementById('applyLogBtn');
+            const logInput = document.getElementById('logInput');
+            const feedback = document.getElementById('parserFeedback');
+            const feedbackText = document.getElementById('parserFeedbackText');
+
+            applyBtn.addEventListener('click', () => {
+                const text = logInput.value.trim();
+                if (!text) {
+                    alert('시세 텍스트를 입력 후 적용해주세요!');
+                    logInput.focus();
+                    return;
+                }
+
+                const userData = getCurrentUserData();
+                const lines = text.split('\n');
+                let updatedCount = 0;
+
+                lines.forEach(line => {
+                    if (!line.trim()) return;
+
+                    let star = 'none';
+                    if (line.includes('🌟')) star = 'gold';
+                    else if (line.includes('🩶')) star = 'silver';
+
+                    let price = null;
+                    if (line.includes('→')) {
+                        const parts = line.split('→');
+                        const lastPart = parts[parts.length - 1].replace(/[^0-9]/g, '');
+                        if (lastPart) price = parseInt(lastPart, 10);
+                    } else if (line.includes('|')) {
+                        const parts = line.split('|');
+                        const lastPart = parts[parts.length - 1].replace(/[^0-9]/g, '');
+                        if (lastPart) price = parseInt(lastPart, 10);
+                    } else {
+                        const nums = line.match(/\d+/g);
+                        if (nums && nums.length > 0) price = parseInt(nums[nums.length - 1], 10);
+                    }
+
+                    if (price === null) return;
+
+                    DISH_PRESETS.forEach(preset => {
+                        const cleanLineName = line.replace(/[^가-힣a-zA-Z]/g, '');
+                        const cleanPresetName = preset.name.replace(/[^가-힣a-zA-Z]/g, '');
+
+                        if (cleanLineName.includes(cleanPresetName)) {
+                            userData.dishes[preset.id].prices[star] = price;
+                            updatedCount++;
+                        }
+                    });
+                });
+
+                if (updatedCount > 0) {
+                    saveState();
+                    renderCards();
+                    logInput.value = '';
+                    feedbackText.textContent = `${updatedCount}개의 시세가 최신화되었습니다!`;
+                    feedback.classList.remove('hidden');
+                    setTimeout(() => feedback.classList.add('hidden'), 4000);
+                } else {
+                    feedbackText.textContent = `시세를 해석하지 못했습니다. 형식을 확인해주세요.`;
+                    feedback.classList.remove('hidden');
+                    setTimeout(() => feedback.classList.add('hidden'), 4000);
+                }
+            });
+        }
+
+        function renderCards() {
+            const grid = document.getElementById('dishGrid');
+            grid.innerHTML = '';
+
+            const userData = getCurrentUserData();
+
+            const filteredPresets = DISH_PRESETS.filter(preset => {
+                if (activeCategory !== 'all' && preset.category.toString() !== activeCategory) return false;
+
+                const dishData = userData.dishes[preset.id];
+                const prices = dishData.prices;
+
+                const hits = {
+                    none: isHitTarget('none', prices.none, preset.maxPrices.none),
+                    silver: isHitTarget('silver', prices.silver, preset.maxPrices.silver),
+                    gold: isHitTarget('gold', prices.gold, preset.maxPrices.gold)
+                };
+                const isAnyHit = hits.none || hits.silver || hits.gold;
+
+                const inv = dishData.inventory;
+                const isAnyOwned = (inv.none.owned || inv.none.count > 0) ||
+                                  (inv.silver.owned || inv.silver.count > 0) ||
+                                  (inv.gold.owned || inv.gold.count > 0);
+
+                if (activeViewFilter === 'peak' && !isAnyHit) return false;
+                if (activeViewFilter === 'owned' && !isAnyOwned) return false;
+
+                return true;
+            });
+
+            if (filteredPresets.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-slate-400 dark:text-slate-500">
+                        <i class="fa-solid fa-box-open text-4xl mb-3 block opacity-50"></i>
+                        <p class="text-sm font-medium">조건에 만족하는 요리가 없습니다.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filteredPresets.forEach(preset => {
+                const dishData = userData.dishes[preset.id];
+                const prices = dishData.prices;
+
+                const hits = {
+                    none: isHitTarget('none', prices.none, preset.maxPrices.none),
+                    silver: isHitTarget('silver', prices.silver, preset.maxPrices.silver),
+                    gold: isHitTarget('gold', prices.gold, preset.maxPrices.gold)
+                };
+
+                const isAnyHit = hits.none || hits.silver || hits.gold;
+
+                const highlightBorder = isAnyHit 
+                    ? 'border-amber-400 ring-2 ring-amber-400/30 dark:shadow-amber-500/10' 
+                    : 'border-slate-200 dark:border-slate-700/70 hover:border-slate-300 dark:hover:border-slate-600';
+
+                // [수정된 이미지 렌더링 로직]
+                let imageElementHtml = '';
+                const displayImage = dishData.image || preset.defaultImage;
+
+                if (displayImage) {
+                    imageElementHtml = `<img src="${displayImage}" class="w-full h-full object-cover">`;
+                } else if (preset.spriteClass) {
+                    imageElementHtml = `<div class="w-full h-full pixel-icon ${preset.spriteClass}"></div>`;
+                } else {
+                    imageElementHtml = `<i class="fa-solid fa-utensils text-slate-400 dark:text-slate-500"></i>`;
+                }
+
+                const cardHtml = document.createElement('div');
+                cardHtml.className = `bg-white dark:bg-slate-800/80 rounded-2xl border ${highlightBorder} shadow-sm dark:shadow-lg p-4 flex flex-col justify-between transition-all duration-200 relative overflow-hidden`;
+
+                cardHtml.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0 relative cursor-pointer group/img" onclick="openImageModal('${preset.id}')" title="이미지 변경">
+                                    ${imageElementHtml}
+                                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity text-[10px] text-white">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">${preset.category}차</span>
+                                        <h3 class="font-bold text-slate-800 dark:text-slate-100 text-sm sm:text-base leading-tight">${preset.name}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            ${isAnyHit 
+                                ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 flex items-center gap-1 shadow-sm"><i class="fa-solid fa-fire"></i> 고점 감지</span>`
+                                : ''
+                            }
+                        </div>
+
+                        <div class="my-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/60 space-y-2">
+                            <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 border-b border-slate-200 dark:border-slate-800 pb-1 flex justify-between">
+                                <span>등급</span>
+                                <span>현재가 (최고점 대비 차이)</span>
+                            </div>
+
+                            ${renderStarPriceRow('none', '무별', prices.none, preset.maxPrices.none, hits.none)}
+                            ${renderStarPriceRow('silver', '🩶 은별', prices.silver, preset.maxPrices.silver, hits.silver)}
+                            ${renderStarPriceRow('gold', '🌟 금별', prices.gold, preset.maxPrices.gold, hits.gold)}
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t border-slate-200 dark:border-slate-700/70 space-y-2">
+                        <div class="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                            <span><i class="fa-solid fa-boxes-stacked me-1 text-slate-400"></i> 보유 현황</span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-1.5">
+                            ${renderStarInventoryItem(preset.id, 'none', '무별', 'text-stone-600 dark:text-stone-300')}
+                            ${renderStarInventoryItem(preset.id, 'silver', '🩶 은별', 'text-slate-600 dark:text-slate-300')}
+                            ${renderStarInventoryItem(preset.id, 'gold', '🌟 금별', 'text-amber-600 dark:text-amber-300')}
+                        </div>
+                    </div>
+                `;
+
+                grid.appendChild(cardHtml);
+            });
+        }
+
+        function isHitTarget(starKey, price, maxPrice) {
+            if (price === null) return false;
+            const userData = getCurrentUserData();
+            const diff = price - maxPrice;
+            const margin = userData.targetMargins[starKey] ?? 0;
+            return Math.abs(diff) <= margin;
+        }
+
+        function renderStarPriceRow(starKey, label, price, maxPrice, isHit) {
+            if (price === null) {
+                return `
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-medium text-slate-500 dark:text-slate-400">${label}</span>
+                        <span class="text-[11px] text-slate-400 dark:text-slate-600">미등록 (최고 ${maxPrice})</span>
+                    </div>
+                `;
+            }
+
+            const diff = price - maxPrice;
+            const diffText = diff === 0 ? '고점 (0)' : `${diff}`;
+
+            return `
+                <div class="flex justify-between items-center text-xs ${isHit ? 'bg-amber-500/10 p-1 rounded border border-amber-500/30' : ''}">
+                    <span class="font-medium text-slate-700 dark:text-slate-300">${label}</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-bold text-slate-800 dark:text-slate-200">${price}</span>
+                        <span class="text-[11px] font-extrabold ${isHit ? 'text-amber-600 dark:text-amber-400' : 'text-rose-500 dark:text-rose-400'}">
+                            (${diffText})
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderStarInventoryItem(dishId, starKey, label, colorClass) {
+            const userData = getCurrentUserData();
+            const inv = userData.dishes[dishId].inventory[starKey] || { owned: false, count: 0 };
+            const isOwned = inv.owned || inv.count > 0;
+
+            return `
+                <div class="bg-slate-50 dark:bg-slate-900/80 p-2 rounded-xl border ${isOwned ? 'border-emerald-500/60 bg-emerald-500/5' : 'border-slate-200 dark:border-slate-700/60'} flex flex-col justify-between space-y-1.5 transition-all">
+                    <label class="flex items-center justify-between cursor-pointer select-none">
+                        <span class="text-[11px] font-medium ${colorClass}">${label}</span>
+                        <input type="checkbox" 
+                            ${isOwned ? 'checked' : ''} 
+                            onchange="toggleInventoryOwned('${dishId}', '${starKey}', this.checked)"
+                            class="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500 bg-white dark:bg-slate-800 cursor-pointer">
+                    </label>
+
+                    <div class="flex items-center justify-between gap-1 pt-1 border-t border-slate-200 dark:border-slate-800">
+                        <button onclick="adjustInventoryCount('${dishId}', '${starKey}', -1)" class="w-4 h-4 rounded bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-[10px] text-slate-600 dark:text-slate-300 flex items-center justify-center">-</button>
+                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200">${inv.count || 0}</span>
+                        <button onclick="adjustInventoryCount('${dishId}', '${starKey}', 1)" class="w-4 h-4 rounded bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-[10px] text-slate-600 dark:text-slate-300 flex items-center justify-center">+</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.toggleInventoryOwned = function(dishId, starKey, isChecked) {
+            const userData = getCurrentUserData();
+            if (!userData.dishes[dishId].inventory[starKey]) {
+                userData.dishes[dishId].inventory[starKey] = { owned: false, count: 0 };
+            }
+            const target = userData.dishes[dishId].inventory[starKey];
+            target.owned = isChecked;
+
+            if (isChecked && target.count === 0) {
+                target.count = 1;
+            } else if (!isChecked) {
+                target.count = 0;
+            }
+
+            saveState();
+            renderCards();
+        };
+
+        window.adjustInventoryCount = function(dishId, starKey, delta) {
+            const userData = getCurrentUserData();
+            if (!userData.dishes[dishId].inventory[starKey]) {
+                userData.dishes[dishId].inventory[starKey] = { owned: false, count: 0 };
+            }
+            const item = userData.dishes[dishId].inventory[starKey];
+            let newCount = (item.count || 0) + delta;
+            if (newCount < 0) newCount = 0;
+            
+            item.count = newCount;
+            item.owned = newCount > 0;
+
+            saveState();
+            renderCards();
+        };
+
+        function setupModalListeners() {
+            const modal = document.getElementById('imageModal');
+            const closeBtn = document.getElementById('closeModalBtn');
+            const saveBtn = document.getElementById('saveImageBtn');
+            const removeBtn = document.getElementById('removeImageBtn');
+            const fileInput = document.getElementById('imageFileInput');
+            const urlInput = document.getElementById('imageUrlInput');
+
+            closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+            removeBtn.addEventListener('click', () => {
+                if (currentModalDishId) {
+                    const userData = getCurrentUserData();
+                    userData.dishes[currentModalDishId].image = null;
+                    saveState();
+                    renderCards();
+                    modal.classList.add('hidden');
+                }
+            });
+
+            saveBtn.addEventListener('click', () => {
+                if (currentModalDishId) {
+                    const userData = getCurrentUserData();
+                    const url = urlInput.value.trim();
+                    if (url) {
+                        userData.dishes[currentModalDishId].image = url;
+                        saveState();
+                        renderCards();
+                    }
+                    modal.classList.add('hidden');
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && currentModalDishId) {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        const userData = getCurrentUserData();
+                        userData.dishes[currentModalDishId].image = evt.target.result;
+                        saveState();
+                        renderCards();
+                        modal.classList.add('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        window.openImageModal = function(dishId) {
+            currentModalDishId = dishId;
+            const userData = getCurrentUserData();
+            const preset = DISH_PRESETS.find(p => p.id === dishId);
+            const dishData = userData.dishes[dishId];
+
+            document.getElementById('modalDishTitle').textContent = `${preset.name} 이미지 변경`;
+            document.getElementById('imageUrlInput').value = dishData.image || '';
+            document.getElementById('imageFileInput').value = '';
+
+            document.getElementById('imageModal').classList.remove('hidden');
+        };
+    </script>
+</body>
+</html>
